@@ -1,0 +1,18 @@
+static const int VAR = 5;	Esto no es una constante.
+
+static: variable que va al segmento de datos, definida dentro de una función es local.
+const: significa que es de sólo lectura, tiene memoria reservada, existe en tiempo de compilación y en tiempo de ejecución, por lo que no es una constante.
+
+# define CONST 17	No es una constante, es una sustitución que hace el preprocesador, donde el preprocesador vea define lo va a sustituir por el 17, el procesador no va a saber nada sobre el nombre y no va a dar errores adecuados. Puede ser útil para cosas que aparecen muchas veces como strings o floats.
+
+PARA DEFINIR CONSTANTES DE TIPO ENTERO USAMOS ENUM:
+
+enum{
+	XX,	// Valdrá 0.
+	YY,	// Valdrá 1
+	A = 8,
+	B,	// Valdrá 9.
+	C = 15;
+	D	// Valdrá 16
+};
+

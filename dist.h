@@ -1,0 +1,1 @@
+int dist(int, int);

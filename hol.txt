@@ -1,0 +1,129 @@
+------------
+PRACTICA 1 |
+------------
+Con el comando fork el hijo hace una copia de los descriptores del ficheros independientes, es decir, si cierro un descriptor de fichero en el hijo no cierro el del padre.
+
+
+Del puntero &status se puede sacar el valor de retorno del hijo y saber si el hijo ha terminado o ha sido asesinado.
+
+Si el padre invoca un wait después de que el hijo ha terminado no se queda colgado, sino que recge el valor y sigue.
+
+---------
+FICHEROS |
+---------
+
+OPEN: Prepara al sistema para que las operciones Read y Write funcionen. Por ejemplo mirar permisos o mirar donde está en memoria ese archivo. Para pasarle el PATHNAMEse le pueden pasar en absoluto: /usr/home/pablo/Nombre_Archivo. Tambien se le puede pasar el nombre relativo: busca en la ruta donde e encuentras.
+
+Cuando haces OPEN se le asigna un numero (el número entero más pequeño posible que esté libre en la tabla de ficheros) al fichero 	que solo tiene sentido para el proceso que lo ha abierto y sus hijos, porque se copian. Si el hijo lo cierra el padre lo tiene abierto, pero si lo modifica el hijo se modifica para el padre.
+
+Cuando abres un fichero el cursos se fija en la posición 0, por lo que comenzarías a escribir en el principio del fichero aunque haya algo escrio.
+
+Las flags sirven para abrir el fichero en modo solo lectura(O_RDONLY) o solo escritura (O_WRONLY) o truncar (O_TRUNC) el archivo que borra lo que hay en el fichero. Tambien se puede invocar al open con el flags O_OPEN para crear un archivo.	Para comenzar a escribir desde el final de donde está escritose usa el flag (O_APPEND).
+
+El parámetro MODE indica los permisos. La lista de ls posibles permisos está en: man 2 wait. Son 9 bits que estan a uno en el permiso que le quieras dar. Los permisos se comprueban en el OPEN.
+
+El Sistema Operativo tiene una lista con todos los ficheros abiertos en el ordenador por todos los procesos.
+
+creat() is equivalent to open() with flags equal to O_CREAT|O_WRONLY|O_TRUNC.
+
+
+
+READ: Lee de un descriptor fichero (ya que estos incluyen la pantalla, el teclado, las tuberías). Según se hagan llamadas de Read se 
+comienza desde la posición del cursor, no desde el principio continuamente. Si posicionas el cursor mas allá de lo escrito te devuelve un '\0'. Si pones el Count a 0, compruebas que es válida la lectura de ese fichero. Si el valor del count es mayor de la que ha leido el read, te indica el número de bytes que ha conseguido leer como retorno. Si el retorno es 0, significa que ha llegado al fin de fichero.
+Si el Read falla, devuelve un -1, cuando lee de un fichero que no existe, por ejemplo.
+Si no hay más bytes y no los va a haber devuelve un 0, peo cuando no hay más bytes pero los puede haber (en un tubería o del teclado) se queda colgado hasta que haya algo o se cierre la conexión, que devolverá un 0 en ese momento. Si se queda colgao esperando, el programa se queda colgado también.
+
+ssize_t read(int fd, void *buf, size_t count);
+
+Si le pasas un ssize_t indica el número de bytes que quieres leer. En el buf se guardan los bytes leídos y en count pasas el número de bytes que quieres leer.
+Hay que tener suficiente espacio en buf para que el read no pise más allá debido a que hemos reservado poca memoria.
+
+Lseek: Reposiciona el cursor en un fichero donde nosotros queramos.
+off_t lseek(int fd, off_t offset, int whence);
+fd es la posición donde quiero poner el cursor, whence indica desde donde empiezo a contar el fd(SEEK_SET desde el commienzo del archivo, SEEK_CUR empieza desde donde está el cursor actualmente, SEEK_END empieza a contar desde el final).
+Si le pasas un número negativo contará hacia atrás.
+Podemos reposicionar el cursor mas allá del fichero. Para ello rellena lo que queda del fichero hasta la psición del cursos agrandando el archivo con '\0'. Útil para hacer archivos grandes (Mueves el cursor 4 gigas y escribes una letra, asi tienes un archivo de 4 gigas).
+
+
+WRITE: Escribe en el fichero. Sobreescribe lo que hay en el fichero a no ser que muevas la posición del cursor.
+Varios procesos pueden escribir simultáneamente un archivo y escribir en el pero para ello hay que sincronizarlos.
+ssize_t write(int fd, const void *buf, size_t count);
+Escribe hasta Count bytes del buf en el ficheto fd.
+Puede escribir menos bytes de lo que tu le has pedido, dependiendo de lo que haya en el buf. El cursor se incrementa el número de bytes que has conseguido escribir. Si le mandas escribir por una tubería se queda bloqueado.
+
+
+
+CLOSE: Cierra el fichero. Retorna un 0 si ha tenido éxito y un -1 si ha habido un error y la descripción del problema en la variable errno. No borra fichero. Si el close cierra un archivo y es el último proceso en cerrar ese archivo , el SO lo borra de la tabla de 
+ficheros abiertos de la máquina.
+
+Para borrar ficheros se utiliza unlink().
+
+Cuando cierro un fichero dejo el número donde estaba el fichero vacío y cuando se abra otro fichero se pone en el hueco vacío. Si intento hacer un Read/Write en un fichero ya cerrado da error.
+
+Con el comando CAT se puede leer en pantalla el archivo y hacer escritura en el fichero desde el teclado.
+
+PIPES y SOCKETS medios de intercambio de daos entre procesos.
+
+Pantalla: descriptor de fichero 1.
+Teclado: descriptor de fichero 0. 
+Pantalla para los errores: descriptor de fichero 2.
+
+
+
+
+
+-----------
+Practica3 |
+-----------
+
+Con dup creamos una copia del descriptor de fichero asignándole el número de descriptor de fichero más bajo posible.
+Si queremos modificar el comando cat, por ejemplo, cuando hacemos el fork, tenemos que hacer un close(0) y un close(1) y hacemos el dup(p) y el dup(q), asi asignara los ficheros p y q (que hemos tenido que abrir) a los n´umero 0 y 1.
+
+Con dup(2) le decimos el número en el que queremos que nos ponga el descriptor del fichero.
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+																								COMUNICACIÓN ENTRE PROCESOS
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Para comunicar procesos se puede realizar con el fork [el padre da los datos a los hijos declarándolos antes del fork y el hijo al padre con el WEXITSTATUS: con valor <255], otro método es con los ficheros comunes, aunque hay que utilizar elementos de sincronización.
+
+Tuberías
+----------
+Son unidireccionales, un proceso escribe y el otro lee
+Su llama con: int pipe2(int pipefd[2], int flags);
+Tiene un array con 2 enteros vacíos, los rellena ella misma, un descriptor de fichero de entrada y otro de salida. Si lo haces antes del fork, tienes que cerra un canal para el padre y cerrar el otro para el hijo, asi tienes una comunicación padre hijo. Si quieres hacer la comunicación la revés tienes que crearte otra tuberia. Sino habría fallos de sincronización.
+
+Una tubería es un trozo de memoria del kernel, un buffer.
+La lectura de una tubería será más rápido que una lectura de un archivo porque la lectura del archivo incluye acceso a memoria del disco duro.
+
+También existen pipes con nombre que permiten la comunicación entre procesos que no se conocen.
+
+Si el pipe a ido bien devuelve un '0' y si falla devuelve un '-1' con la explicación en errno.
+
+Tuberias con nombre: FIFOS
+
+Se utiliza para comunicar procesos que no son familia. Para crear la tubería con nombre: int mkfifo(const char *pathname, mode_t mode);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

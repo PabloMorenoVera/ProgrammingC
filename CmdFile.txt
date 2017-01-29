@@ -1,0 +1,2 @@
+/bin/cat Texto1.txt Texto2.txt
+/bin/ls /bin/home/usr/pablo/ Texto3.txt

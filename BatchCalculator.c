@@ -1,165 +1,160 @@
+//Pablo Moreno Vera
+// Doble Grado IST y ADE
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
+#include <string.h>
 
-static void asignar_simbolo(char operacion[], char op[]) {
+static void Comprobar_Error(int Chek, char error[]){
 
-  if (strcmp (op , "MUL")) {
-    operacion[1] = '*';
-  }else if (strcmp (op , "SUM")) {
-    operacion[1] = '+';
-  }else if (strcmp (op , "DIV")) {
-    operacion[1] = '/';
-  }else if (strcmp (op , "SUB")) {
-    operacion[1] = '-';
-  }else{
-    perror("Error al asginar la operacion.");
+  if (Chek == -1) {
+    perror(error);
     exit(EXIT_FAILURE);
   }
 }
 
-int leer_linea(int Fichero, char operacion[]){
-  int leer = 0, i = 0;
-  char c, op[3] = "";
+char Convertir_Simbolo(char op[]){
 
-  leer = read(Fichero, &c, sizeof(c));
-  if (leer == -1) {
-    perror("Error al leer del fichero.");
-    exit(EXIT_FAILURE);
-  }else if (leer == 0) {
-    return -1;
-  }else if (c == '/') {
-    while (c != '\n') {
-      leer = read(Fichero, &c, sizeof(c));
-      if (leer == -1) {
-        perror("Error al leer del fichero.");
-        exit(EXIT_FAILURE);
-      }
-    }
+  if (strcmp(op, "SUM") == 0) {
+    return '+';
+  }else if (strcmp(op, "SUB") == 0) {
+    return '-';
+  }else if (strcmp(op, "DIV") == 0) {
+    return '/';
+  }else if (strcmp(op, "MUL") == 0) {
+    return '*';
   }else{
-    operacion[0] = c;
+    perror("Error al convertir el símbolo");
+    exit(EXIT_FAILURE);
+  }
+}
 
-    leer = read(Fichero, &c, sizeof(c)); /*Leo el espacio*/
-    if (leer == -1) {
-      perror("Error al leer del fichero.");
-      exit(EXIT_FAILURE);
-    }
+int Leer_Operacion(int Fichero_O, int Fichero_D, char operacion[]){
 
-    for (size_t i = 0; i < 3; i++) {
-      leer = read(Fichero, &c, sizeof(c));
-      if (leer == -1) {
-        perror("Error al leer del fichero.");
-        exit(EXIT_FAILURE);
-      }
-      op[i] = c;
-    }
+  int leer = -1, escribir = -1, i = 1;
+  char c, op[5] = "";
 
-    asignar_simbolo(operacion, op);
+  leer = read(Fichero_O, &c, sizeof(c));
+  Comprobar_Error(leer, "Error al leer del Fichero_Origen");
 
-    leer = read(Fichero, &c, sizeof(c)); /*Leo el espacio*/
-    if (leer == -1) {
-      perror("Error al leer del fichero.");
-      exit(EXIT_FAILURE);
-    }
-
-    leer = read(Fichero, &c, sizeof(c));
-    if (leer == -1) {
-      perror("Error al leer del fichero.");
-      exit(EXIT_FAILURE);
-    }
-
-    operacion[2] = c;
+  if (leer == 0) {
     return 0;
   }
 
-}
-
-static void abrir_tuberia(int tuberia[]) {
-  int abrir = 0;
-
-  abrir = pipe(tuberia);
-  if (abrir == -1) {
-    perror("Error al abrir la tubería.");
-    exit(EXIT_FAILURE);
-  }
-}
-
-static void cerrar_descriptor(int descriptor) {
-  int cerrar = 0;
-
-  cerrar = close(descriptor);
-  if (cerrar == -1) {
-    perror("Error al cerrar el descriptor.");
-    exit(EXIT_FAILURE);
-  }
-}
-
-static void escribir_operacion(int tuberia, char operacion[]) {
-  int escribir = 0;
-
-    escribir = write(tuberia, &operacion, strlen(operacion));
-    if (escribir == -1) {
-      perror("Error al escribir la operación.");
-      exit(EXIT_FAILURE);
+  if (c == '/') {
+    while (c != '\n') {
+      leer = read(Fichero_O, &c, sizeof(c));
+      Comprobar_Error(leer, "Error al leer del Fichero_Origen");
     }
+    return -1;
+  }else if (c == '\n') {
+    return -1;
+  }else{
+    operacion[0] = c;
+
+    while (operacion[i-1] != ' ') {
+      leer = read(Fichero_O, &operacion[i], sizeof(c));
+      Comprobar_Error(leer, "Error al leer del Fichero_Origen");
+      ++i;
+    }
+
+    for (size_t j = 0; j < 3; j++) {
+      leer = read(Fichero_O, &op[j], sizeof(c));
+      Comprobar_Error(leer, "Error al leer la operación del Fichero_Origen");
+    }
+
+    operacion[i] = Convertir_Simbolo(op);
+    ++i;
+    leer = read(Fichero_O, &operacion[i], sizeof(c));
+    Comprobar_Error(leer, "Error al leer del Fichero_Origen");
+
+    while (operacion[i] != '\n' && operacion[i] != '/') {
+      ++i;
+      leer = read(Fichero_O, &operacion[i], sizeof(c));
+      Comprobar_Error(leer, "Error al leer del Fichero_Origen");
+    }
+
+    if (operacion[i] == '/') {
+      operacion[i] = '\n';
+
+      while (c != '\n') {
+        leer = read(Fichero_O, &c, sizeof(c));
+        Comprobar_Error(leer, "Error al leer del Fichero_Origen");
+      }
+    }
+
+    escribir = write(Fichero_D, operacion, strlen(operacion)-1);
+    Comprobar_Error(escribir, "Error al escribir la operación en el Fichero_Destino");
+
+    escribir = write(Fichero_D, " = ", 3);
+    Comprobar_Error(escribir, "Error al escribir la operación en el Fichero_Destino");
+  }
+
+  return 1;
 }
 
 int main(int argc, char const *argv[]) {
-  int Fichero = 0, index = 0,  tuberia_padre[2], tuberia_hijo[2];
-  int Fichero_Destino = 0;
-  char operacion[10] = "";
-  pid_t hijo = 0;
+  int Fichero_Origen = -1, Fichero_Destino = -1, Hijo = -1;
+  int Tuberia_P2H[2], Tuberia_H2P[2];
+  int abrir = -1, cerrar = -1, index = -1, leer = -1, escribir = -1;
+  char operacion[50] = "";
 
   if (argc != 3) {
-    printf("Número de argumentos incorrecto.");
-    printf("Por favor, introduzca: Fichero_Origen y Fichero_Destino.\n");
-  }
-
-  Fichero = open(argv[1], O_RDONLY);
-  if (Fichero == -1) {
-    perror("Error al abrir el fichero de lectura.");
+    perror("Error de argumentos, introduce: Fichero_Origen Fichero_Destino");
     exit(EXIT_FAILURE);
   }
 
-  index = leer_linea(Fichero, operacion);
+  Fichero_Origen = open(argv[1], O_RDONLY);
+  Comprobar_Error(Fichero_Origen, "Error al abrir el Fichero_Origen.");
 
-  abrir_tuberia(tuberia_padre);
-  abrir_tuberia(tuberia_hijo);
+  Fichero_Destino = open(argv[2], O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
+  Comprobar_Error(Fichero_Destino, "Error al abrir el Fichero_Destino.");
 
-  hijo = fork();
+  abrir = pipe(Tuberia_P2H);
+  Comprobar_Error(abrir, "Error al abrir la Tuberia_P2H");
 
-  if (hijo == 0) {
-    /* code */
+  abrir = pipe(Tuberia_H2P);
+  Comprobar_Error(abrir, "Error al abrir la Tuberia_H2P");
 
-    cerrar_descriptor(tuberia_hijo[0]);
-    cerrar_descriptor(tuberia_padre[1]);
+  Hijo = fork();
+  if (Hijo == 0) {
 
-    cerrar_descriptor(0);
-    dup(tuberia_padre[0]);
-    cerrar_descriptor(tuberia_padre[0]);
+    cerrar = close(Tuberia_P2H[1]);
+    Comprobar_Error(cerrar, "Error al cerrar la Tuberia_P2H[1].");
+    cerrar = close(Tuberia_H2P[0]);
+    Comprobar_Error(cerrar, "Error al cerrar la Tuberia_H2P[0].");
 
-    cerrar_descriptor(1);
-    Fichero_Destino = open(argv[2], O_WRONLY|O_CREAT,S_IRUSR|S_IWUSR);
-    if (Fichero_Destino == -1) {
-      perror("Error al abrir el fichero de lectura.");
-      exit(EXIT_FAILURE);
-    }
+    cerrar = close(0);
+    dup(Tuberia_P2H[0]);
+    cerrar = close(Tuberia_P2H[0]);
+
+    cerrar = close(1);
     dup(Fichero_Destino);
-    cerrar_descriptor(Fichero_Destino);
+    cerrar = close(Fichero_Destino);
 
-    execl("/usr/bin/bc", "/usr/bin/bc", NULL);
+    execlp("bc", "bc", NULL);
 
   }else{
 
-    cerrar_descriptor(tuberia_hijo[1]);
-    cerrar_descriptor(tuberia_padre[0]);
+    cerrar = close(Tuberia_P2H[0]);
+    Comprobar_Error(cerrar, "Error al cerrar la Tuberia_P2H[0].");
+    cerrar = close(Tuberia_H2P[1]);
+    Comprobar_Error(cerrar, "Error al cerrar la Tuberia_H2P[1].");
 
-    escribir_operacion(tuberia_padre[1], operacion);
+    while (index != 0) {
+      usleep(500);
+      memset(operacion, '\0', 50);
+      index = Leer_Operacion(Fichero_Origen, Fichero_Destino, operacion);
 
+      if (index == 1) {
+        write(1, operacion, sizeof(operacion));
+        escribir = write(Tuberia_P2H[1], operacion, strlen(operacion));
+      }
+    }
+    escribir = write(Tuberia_P2H[1], "quit\n", 5);
   }
 
   return 0;
